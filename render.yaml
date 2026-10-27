@@ -4,7 +4,7 @@ services:
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
-    startCommand: python manage.py migrate --noinput && python manage.py load_soccer_demo_data && gunicorn myproject.wsgi:application
+    startCommand: python manage.py migrate --noinput && python manage.py load_soccer_demo_data && python manage.py load_f1_demo_data && gunicorn myproject.wsgi:application
     healthCheckPath: /health/
     envVars:
       - key: PYTHON_VERSION
