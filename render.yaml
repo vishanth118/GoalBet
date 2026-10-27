@@ -4,7 +4,7 @@ services:
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
-    startCommand: gunicorn myproject.wsgi:application
+    startCommand: python manage.py migrate --noinput && gunicorn myproject.wsgi:application
     healthCheckPath: /health/
     envVars:
       - key: PYTHON_VERSION
