@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% load tz %}
+{% block title %}Formula 1 | GoalBet{% endblock %}
+{% block content %}
+<div class="f1-dashboard">
+  <section class="f1-showcase-hero">
+    <div class="f1-hero-copy">
+      <span class="f1-kicker">GoalBet Formula 1</span>
+      <h1>Lights out.<span>Focus on the finish.</span></h1>
+      <p class="lead">Race weekends, driver standings and virtual-credit predictions, together in one paddock.</p>
+      <div class="f1-actions">
+        <a class="btn btn-f1" href="{% url 'f1_calendar' %}">Explore race calendar</a>
+        <a class="btn btn-outline-light" href="{% url 'f1_standings' %}">View standings</a>
+      </div>
+    </div>
+    <aside class="race-spotlight">
+      <div class="race-spotlight-label"><span>Next event</span>{% if next_gp %}<span class="status">{{ next_gp.get_source_display }}</span>{% endif %}</div>
+      {% if next_gp %}
+        <h2>{{ next_gp.name }}</h2>
+        <p>{{ next_gp.circuit.name }} · {{ next_gp.circuit.locality }}, {{ next_gp.circuit.country }}</p>
+        {% if next_gp.date_start %}
+          <div class="race-spotlight-date"><b>{{ next_gp.date_start|date:'d' }}</b><span>{{ next_gp.date_start|date:'M Y' }}<br>Weekend starts</span></div>
+        {% elif sessions %}
+          <div class="race-spotlight-date"><b>{% timezone next_gp.circuit.time_zone %}{{ sessions.0.start_time|date:'d' }}{% endtimezone %}</b><span>{% timezone next_gp.circuit.time_zone %}{{ sessions.0.start_time|date:'M Y' }}{% endtimezone %}<br>First scheduled session</span></div>
+        {% endif %}
+        <a class="btn btn-f1 mt-3" href="{% url 'f1_race_detail' next_gp.pk %}">Open race weekend <span aria-hidden="true">↗</span></a>
+      {% else %}
+        <h2>Ready for the next race?</h2>
+        <p>No upcoming provider or demo event is currently in the database.</p>
+        <a class="btn btn-f1 mt-2" href="{% url 'f1_calendar' %}">Browse calendar</a>
+      {% endif %}
+    </aside>
+  </section>
+
+  {% if season %}
+    <div class="f1-season-label">{{ season }} season · {{ data_source|default:'stored data' }}</div>
+    <section class="f1-stat-grid" aria-label="Season data overview">
+      <article class="f1-stat"><b class="js-count" data-value="{{ race_count }}">{{ race_count }}</b><span>Race weekends listed</span></article>
+      <article class="f1-stat"><b class="js-count" data-value="{{ session_count }}">{{ session_count }}</b><span>Sessions listed</span></article>
+      <article class="f1-stat"><b class="js-count" data-value="{{ driver_count }}">{{ driver_count }}</b><span>Drivers represented</span></article>
+    </section>
+  {% endif %}
+
+  {% if next_gp %}
+    <section>
+      <div class="f1-section-title"><div><div class="eyebrow f1-accent">WEEKEND SCHEDULE</div><h2>Session times</h2></div><a href="{% url 'f1_race_detail' next_gp.pk %}">Full event details</a></div>
+      {% if sessions %}
+        <div class="session-strip f1-upcoming-strip">
+          {% for session in sessions %}
+            <div><small>{{ session.get_session_type_display }}{% if session.session_type == 'practice' %} {{ session.sequence }}{% endif %}</small><strong>{% timezone next_gp.circuit.time_zone %}{{ session.start_time|date:'D, M j · H:i' }}{% endtimezone %}</strong><small>LOCAL CIRCUIT TIME · {{ session.get_status_display|upper }}</small></div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="f1-empty">This event has no scheduled sessions in the database yet.</div>
+      {% endif %}
+    </section>
+  {% endif %}
+
+  <div class="row g-4 mt-1">
+    <section class="col-lg-6">
+      <div class="f1-section-title"><div><div class="eyebrow f1-accent">DRIVER CHAMPIONSHIP{% if season %} · {{ season }}{% endif %}</div><h2>Drivers</h2></div><a href="{% url 'f1_standings' %}">Full standings</a></div>
+      <div class="table-responsive f1-table-wrap"><table class="table dark-table"><thead><tr><th>Driver</th><th>Constructor</th><th>Points</th></tr></thead><tbody>
+        {% for driver in drivers %}<tr><td><b class="driver-number">{{ driver.number }}</b> {{ driver.name }}</td><td>{{ driver.constructor.name }}</td><td><strong>{{ driver.points|default:0 }}</strong></td></tr>
+        {% empty %}<tr><td colspan="3">No completed classifications are available for this season yet.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+    <section class="col-lg-6">
+      <div class="f1-section-title"><div><div class="eyebrow f1-accent">CONSTRUCTOR CHAMPIONSHIP</div><h2>Teams</h2></div><a href="{% url 'f1_standings' %}">Full standings</a></div>
+      <div class="table-responsive f1-table-wrap"><table class="table dark-table"><thead><tr><th>Constructor</th><th>Wins</th><th>Points</th></tr></thead><tbody>
+        {% for team in constructors %}<tr><td><span class="team-swatch" style="--team-color:{{ team.color }}"></span>{{ team.name }}</td><td>{{ team.wins }}</td><td><strong>{{ team.points|default:0 }}</strong></td></tr>
+        {% empty %}<tr><td colspan="3">Constructor standings appear when completed results are stored.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+  </div>
+
+  <section>
+    <div class="f1-section-title"><div><div class="eyebrow f1-accent">CLASSIFICATIONS</div><h2>Latest race results</h2></div><a href="{% url 'f1_results' %}">All results</a></div>
+    <div class="table-responsive f1-table-wrap"><table class="table dark-table"><thead><tr><th>Event</th><th>Position</th><th>Driver</th><th>Constructor</th><th>Points</th></tr></thead><tbody>
+      {% for result in latest_results %}<tr><td>{{ result.session.grand_prix.name }} <small class="f1-source-label">{{ result.session.grand_prix.get_source_display }}</small></td><td>{{ result.position|default:'-' }}</td><td>{{ result.driver.name }}</td><td>{{ result.constructor.name }}</td><td>{{ result.points|default:'-' }}</td></tr>
+      {% empty %}<tr><td colspan="5">No completed race classifications are stored yet.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+</div>
+{% endblock %}

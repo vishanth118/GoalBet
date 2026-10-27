@@ -1,0 +1,8 @@
+Django>=6.1,<6.2
+python-dotenv>=1.0,<2.0
+openai>=1.68,<3.0
+pymongo>=4.10,<5.0
+gunicorn>=23,<24
+whitenoise>=6.9,<7
+dj-database-url>=2.3,<4
+psycopg[binary]>=3.2,<4

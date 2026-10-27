@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: goalbet
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    preDeployCommand: python manage.py migrate --noinput && python manage.py seed_help_content && python manage.py collectstatic --noinput
+    startCommand: gunicorn myproject.wsgi:application
+    healthCheckPath: /health/
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.5
+      - key: DJANGO_DEBUG
+        value: "0"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_ALLOWED_HOSTS
+        value: goalbet.onrender.com
+      - key: DATABASE_URL
+        fromDatabase:
+          name: goalbet-db
+          property: connectionString
+      - key: DJANGO_SECURE_SSL_REDIRECT
+        value: "1"
+      - key: OPENAI_MODEL
+        value: gpt-6-astra
+      - key: MONGODB_DATABASE
+        value: goalbet
+databases:
+  - name: goalbet-db
+    databaseName: goalbet
+    user: goalbet
