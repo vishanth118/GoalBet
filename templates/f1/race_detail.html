@@ -1,1 +1,179 @@
-{% extends 'base.html' %}{% load tz %}{% block title %}{{ race.name }} | GoalBet{% endblock %}{% block content %}<a class="back-link f1-accent" href="{% url 'f1_calendar' %}">Back to calendar</a><section class="detail-card f1-detail"><div class="eyebrow f1-accent">ROUND {{ race.round_number }} | DEMO GRAND PRIX</div><h1>{{ race.name }}</h1><p>{{ race.circuit.name }} | {{ race.circuit.locality }}, {{ race.circuit.country }}</p><p class="muted">{{ race.circuit.length_km|default:'-' }} km | Session times shown in circuit local time.</p></section><div class="notice">Simulated virtual multipliers only. No real bookmaker odds or guaranteed outcomes.</div><div class="section-head"><div><div class="eyebrow f1-accent">WEEKEND SCHEDULE</div><h2>Sessions</h2></div></div>{% for session,form in session_forms %}<section class="session-card"><div class="session-heading"><div><span class="eyebrow f1-accent">{{ session.get_session_type_display }}{% if session.session_type == 'practice' %} {{ session.sequence }}{% endif %}</span><h2>{% timezone race.circuit.time_zone %}{{ session.start_time|date:'l, M j - H:i' }}{% endtimezone %} local</h2></div><span class="status">{{ session.get_status_display }}</span></div>{% if session.results.all %}<div class="table-responsive"><table class="table dark-table"><thead><tr><th>Pos</th><th>Driver</th><th>Team</th><th>Points</th><th>Fastest lap</th></tr></thead><tbody>{% for result in session.results.all %}<tr><td>{{ result.position|default:'-' }}</td><td>{{ result.driver.name }}</td><td>{{ result.constructor.name }}</td><td>{{ result.points }}</td><td>{{ result.fastest_lap|yesno:'Yes,-' }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}{% if session.status == 'scheduled' and session.start_time > now %}{% if user.is_authenticated %}<form method="post" class="f1-pick-form">{% csrf_token %}{{ form.non_field_errors }}{{ form.session }}<label class="form-label">Market</label>{{ form.market }}{{ form.market.errors }}<label class="form-label mt-2">Driver</label>{{ form.driver }}{{ form.driver.errors }}<label class="form-label mt-2">Virtual credit stake</label>{{ form.stake }}{{ form.stake.errors }}<div class="muted tiny">Multipliers: winner {{ multipliers.race_winner }}x | podium {{ multipliers.podium }}x | pole {{ multipliers.pole }}x | fastest lap {{ multipliers.fastest_lap }}x. Payout is stake x saved multiplier.</div><button class="btn btn-f1 mt-2">Submit F1 prediction</button></form>{% else %}<p><a href="{% url 'login' %}">Log in</a> to predict using virtual credits.</p>{% endif %}{% elif session.status == 'scheduled' %}<p class="muted">Predictions closed when this session started.</p>{% endif %}</section>{% empty %}<div class="empty-state">Sessions have not been scheduled.</div>{% endfor %}{% if predictions %}<div class="section-head"><div><div class="eyebrow f1-accent">YOUR PICKS</div><h2>F1 prediction history</h2></div></div><div class="table-responsive"><table class="table dark-table"><thead><tr><th>Session</th><th>Market</th><th>Driver</th><th>Stake</th><th>Status</th></tr></thead><tbody>{% for prediction in predictions %}<tr><td>{{ prediction.session.get_session_type_display }}</td><td>{{ prediction.get_market_display }}</td><td>{{ prediction.selected_driver.name }}</td><td>{{ prediction.stake }} VC</td><td>{{ prediction.get_status_display }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}{% endblock %}
+
+{% extends 'base.html' %}
+{% load tz %}
+
+{% block title %}{{ race.name }} | GoalBet{% endblock %}
+
+{% block content %}
+
+<a class="back-link f1-accent" href="{% url 'f1_calendar' %}">
+    Back to calendar
+</a>
+
+<section class="detail-card f1-detail">
+    <div class="eyebrow f1-accent">
+        ROUND {{ race.round_number }} | DEMO GRAND PRIX
+    </div>
+    <h1>{{ race.name }}</h1>
+    <p>{{ race.circuit.name }} | {{ race.circuit.locality }}, {{ race.circuit.country }}</p>
+    <p class="muted">
+        {{ race.circuit.length_km|default:'-' }} km |
+        Session times shown in circuit local time.
+    </p>
+</section>
+
+<div class="notice">
+    Simulated virtual multipliers only. No real bookmaker odds or guaranteed outcomes.
+</div>
+
+<div class="section-head">
+    <div>
+        <div class="eyebrow f1-accent">WEEKEND SCHEDULE</div>
+        <h2>Sessions</h2>
+    </div>
+</div>
+
+{% for session, form in session_forms %}
+<section class="session-card">
+
+    <div class="session-heading">
+        <div>
+            <span class="eyebrow f1-accent">
+                {{ session.get_session_type_display }}
+                {% if session.session_type == 'practice' %}
+                    {{ session.sequence }}
+                {% endif %}
+            </span>
+
+            <h2>
+                {% timezone race.circuit.time_zone %}
+                    {{ session.start_time|date:'l, M j - H:i' }}
+                {% endtimezone %}
+                local
+            </h2>
+        </div>
+
+        <span class="status">{{ session.get_status_display }}</span>
+    </div>
+
+    {% if session.results.all %}
+    <div class="table-responsive">
+        <table class="table dark-table">
+            <thead>
+                <tr>
+                    <th>Pos</th>
+                    <th>Driver</th>
+                    <th>Team</th>
+                    <th>Points</th>
+                    <th>Fastest lap</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in session.results.all %}
+                <tr>
+                    <td>{{ result.position|default:'-' }}</td>
+                    <td>{{ result.driver.name }}</td>
+                    <td>{{ result.constructor.name }}</td>
+                    <td>{{ result.points }}</td>
+                    <td>{{ result.fastest_lap|yesno:'Yes,-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if session.status == 'scheduled' and session.start_time > now and session.session_type != 'practice' %}
+
+        {% if user.is_authenticated %}
+        <form method="post" class="f1-pick-form">
+            {% csrf_token %}
+
+            {{ form.non_field_errors }}
+            {{ form.session }}
+
+            <label class="form-label">Market</label>
+            {{ form.market }}
+            {{ form.market.errors }}
+
+            <label class="form-label mt-2">Driver</label>
+            {{ form.driver }}
+            {{ form.driver.errors }}
+
+            <label class="form-label mt-2">Virtual credit stake</label>
+            {{ form.stake }}
+            {{ form.stake.errors }}
+
+            <div class="muted tiny">
+                Multipliers: winner {{ multipliers.race_winner }}x |
+                podium {{ multipliers.podium }}x |
+                pole {{ multipliers.pole }}x |
+                fastest lap {{ multipliers.fastest_lap }}x.
+                Payout is stake x saved multiplier.
+            </div>
+
+            <button type="submit" class="btn btn-f1 mt-2">
+                Submit F1 prediction
+            </button>
+        </form>
+
+        {% else %}
+        <p>
+            <a href="{% url 'login' %}">Log in</a>
+            to predict using virtual credits.
+        </p>
+        {% endif %}
+
+    {% elif session.status == 'scheduled' and session.session_type == 'practice' %}
+        <p class="muted">
+            Predictions are available for qualifying and Grand Prix sessions, not practice sessions.
+        </p>
+
+    {% elif session.status == 'scheduled' %}
+        <p class="muted">
+            Predictions closed when this session started.
+        </p>
+    {% endif %}
+
+</section>
+{% empty %}
+<div class="empty-state">
+    Sessions have not been scheduled.
+</div>
+{% endfor %}
+
+{% if predictions %}
+<div class="section-head">
+    <div>
+        <div class="eyebrow f1-accent">YOUR PICKS</div>
+        <h2>F1 prediction history</h2>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table dark-table">
+        <thead>
+            <tr>
+                <th>Session</th>
+                <th>Market</th>
+                <th>Driver</th>
+                <th>Stake</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for prediction in predictions %}
+            <tr>
+                <td>{{ prediction.session.get_session_type_display }}</td>
+                <td>{{ prediction.get_market_display }}</td>
+                <td>{{ prediction.selected_driver.name }}</td>
+                <td>{{ prediction.stake }} VC</td>
+                <td>{{ prediction.get_status_display }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% endblock %}
